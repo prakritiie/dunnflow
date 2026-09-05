@@ -1,0 +1,187 @@
+# dunnflow canonical failure taxonomy
+# terminality: SOFT (retryable) | HARD (no retry, needs customer action) |
+#              AMBIGUOUS (reconcile only) | PROHIBITED (no money movement ever)
+version: "v3.1.2"
+
+families:
+  LIQUIDITY:    "Balance or limit related"
+  INSTRUMENT:   "Card or account unusable"
+  BEHAVIORAL:   "Customer did not complete authorisation"
+  ISSUER:       "Issuing bank side decline"
+  TRANSIENT:    "Transient network or gateway error"
+  AMBIGUITY:    "Outcome unknown - money may have moved"
+  RISK:         "Fraud or risk decline"
+  OPERATIONAL:  "Merchant or operational condition"
+  UNCLASSIFIED: "Could not be classified"
+
+classes:
+  - code: INSUFFICIENT_FUNDS
+    family: LIQUIDITY
+    terminality: SOFT
+    retry_eligible: true
+    requires_customer_action: false
+    default_max_attempts: 3
+    default_backoff: DEFER_CREDIT_CYCLE
+    confidence_floor: 0.70
+    recoverable: true
+
+  - code: TEMPORARY_HOLD
+    family: LIQUIDITY
+    terminality: SOFT
+    retry_eligible: true
+    requires_customer_action: false
+    default_max_attempts: 2
+    default_backoff: FIXED_SHORT
+    confidence_floor: 0.70
+    recoverable: true
+
+  - code: CARD_EXPIRED
+    family: INSTRUMENT
+    terminality: HARD
+    retry_eligible: false
+    requires_customer_action: true
+    default_max_attempts: 0
+    default_backoff: NONE
+    confidence_floor: 0.75
+    recoverable: false
+
+  - code: INVALID_CVV
+    family: INSTRUMENT
+    terminality: HARD
+    retry_eligible: false
+    requires_customer_action: true
+    default_max_attempts: 0
+    default_backoff: NONE
+    confidence_floor: 0.75
+    recoverable: false
+
+  - code: LOST_OR_STOLEN
+    family: INSTRUMENT
+    terminality: HARD
+    retry_eligible: false
+    requires_customer_action: true
+    default_max_attempts: 0
+    default_backoff: NONE
+    confidence_floor: 0.85
+    recoverable: false
+
+  - code: AUTH_ABANDONED
+    family: BEHAVIORAL
+    terminality: HARD
+    retry_eligible: false
+    requires_customer_action: true
+    default_max_attempts: 0
+    default_backoff: NONE
+    confidence_floor: 0.65
+    recoverable: false
+
+  - code: OTP_TIMEOUT
+    family: BEHAVIORAL
+    terminality: HARD
+    retry_eligible: false
+    requires_customer_action: true
+    default_max_attempts: 0
+    default_backoff: NONE
+    confidence_floor: 0.65
+    recoverable: false
+
+  - code: ISSUER_DECLINE
+    family: ISSUER
+    terminality: SOFT
+    retry_eligible: true
+    requires_customer_action: false
+    default_max_attempts: 2
+    default_backoff: ISSUER_HEALTH_GATED
+    confidence_floor: 0.70
+    recoverable: true
+
+  - code: SOFT_DECLINE
+    family: ISSUER
+    terminality: SOFT
+    retry_eligible: true
+    requires_customer_action: false
+    default_max_attempts: 3
+    default_backoff: EXPONENTIAL_JITTER
+    confidence_floor: 0.70
+    recoverable: true
+
+  - code: NETWORK_ERROR
+    family: TRANSIENT
+    terminality: SOFT
+    retry_eligible: true
+    requires_customer_action: false
+    default_max_attempts: 3
+    default_backoff: EXPONENTIAL_JITTER
+    confidence_floor: 0.60
+    recoverable: true
+
+  - code: GATEWAY_ERROR
+    family: TRANSIENT
+    terminality: SOFT
+    retry_eligible: true
+    requires_customer_action: false
+    default_max_attempts: 3
+    default_backoff: EXPONENTIAL_JITTER
+    confidence_floor: 0.60
+    recoverable: true
+
+  - code: GATEWAY_TIMEOUT
+    family: AMBIGUITY
+    terminality: AMBIGUOUS
+    retry_eligible: false
+    requires_customer_action: false
+    default_max_attempts: 0
+    default_backoff: NONE
+    confidence_floor: 0.60
+    recoverable: true
+
+  - code: NETWORK_AMBIGUOUS
+    family: AMBIGUITY
+    terminality: AMBIGUOUS
+    retry_eligible: false
+    requires_customer_action: false
+    default_max_attempts: 0
+    default_backoff: NONE
+    confidence_floor: 0.60
+    recoverable: true
+
+  - code: RISK_DECLINED
+    family: RISK
+    terminality: HARD
+    retry_eligible: false
+    requires_customer_action: false
+    default_max_attempts: 0
+    default_backoff: NONE
+    confidence_floor: 0.90
+    recoverable: false
+
+  - code: FRAUD_SUSPECTED
+    family: RISK
+    terminality: PROHIBITED
+    retry_eligible: false
+    requires_customer_action: false
+    default_max_attempts: 0
+    default_backoff: NONE
+    confidence_floor: 0.90
+    recoverable: false
+
+  - code: DUPLICATE_DETECTED
+    family: OPERATIONAL
+    terminality: HARD
+    retry_eligible: false
+    requires_customer_action: false
+    default_max_attempts: 0
+    default_backoff: NONE
+    confidence_floor: 0.80
+    recoverable: false
+
+  - code: UNKNOWN
+    family: UNCLASSIFIED
+    terminality: HARD
+    retry_eligible: false
+    requires_customer_action: false
+    default_max_attempts: 0
+    default_backoff: NONE
+    confidence_floor: 0.00
+    escalate_immediately: true
+    recoverable: false

@@ -1,0 +1,131 @@
+# Deterministic policy matrix. Every rule_id displayed by the console exists here.
+# Precedence: overrides first, then most specific attempt_index, then wildcard.
+version: "v2.4.1"
+
+high_value_ceiling_minor: 5000000   # Rs 50,000 -> requires HITL approval
+
+rules:
+  # ---- overrides (evaluated first) ----
+  - rule_id: HIGH_VALUE_HITL_012
+    override: true
+    match: { amount_minor_gte: 5000000 }
+    action: ESCALATE_HUMAN
+    rationale_code: ABOVE_HITL_CEILING
+    requires_human_approval: true
+
+  # ---- AMBIGUITY: reconcile only, never retry ----
+  - rule_id: HOLD_AND_RECONCILE_001
+    match: { class: GATEWAY_TIMEOUT }
+    action: RECONCILE
+    rationale_code: OUTCOME_UNKNOWN
+  - rule_id: HOLD_AND_RECONCILE_001
+    match: { class: NETWORK_AMBIGUOUS }
+    action: RECONCILE
+    rationale_code: OUTCOME_UNKNOWN
+
+  # ---- LIQUIDITY ----
+  - rule_id: DEFER_TO_CREDIT_CYCLE_003
+    match: { class: INSUFFICIENT_FUNDS, attempt_index_lt: 3 }
+    action: RETRY_SAME_RAIL
+    backoff: DEFER_CREDIT_CYCLE
+    rationale_code: AWAIT_CREDIT_CYCLE
+  - rule_id: NOTIFY_INSUFFICIENT_FUNDS_013
+    match: { class: INSUFFICIENT_FUNDS, attempt_index_gte: 3 }
+    action: TERMINATE
+    rationale_code: ATTEMPTS_EXHAUSTED
+  - rule_id: WAIT_FOR_HOLD_RELEASE_008
+    match: { class: TEMPORARY_HOLD, attempt_index_lt: 2 }
+    action: RETRY_SAME_RAIL
+    backoff: FIXED_SHORT
+    rationale_code: AWAIT_HOLD_RELEASE
+  - rule_id: WAIT_FOR_HOLD_RELEASE_008
+    match: { class: TEMPORARY_HOLD, attempt_index_gte: 2 }
+    action: TERMINATE
+    rationale_code: ATTEMPTS_EXHAUSTED
+
+  # ---- INSTRUMENT: HARD, never retry ----
+  - rule_id: SEND_UPDATE_INSTRUMENT_007
+    match: { class: CARD_EXPIRED }
+    action: REQUEST_NEW_INSTRUMENT
+    channel: EMAIL
+    rationale_code: INSTRUMENT_UNUSABLE
+  - rule_id: SEND_UPDATE_INSTRUMENT_007
+    match: { class: INVALID_CVV }
+    action: REQUEST_NEW_INSTRUMENT
+    channel: EMAIL
+    rationale_code: INSTRUMENT_UNUSABLE
+  - rule_id: RISK_BLOCK_NO_RETRY_011
+    match: { class: LOST_OR_STOLEN }
+    action: TERMINATE
+    rationale_code: INSTRUMENT_BLOCKED
+
+  # ---- BEHAVIORAL: nothing was authorised, do not retry ----
+  - rule_id: NO_RETRY_AUTH_ABANDONED_010
+    match: { class: AUTH_ABANDONED }
+    action: TERMINATE
+    rationale_code: NEVER_AUTHORISED
+  - rule_id: NO_RETRY_AUTH_ABANDONED_010
+    match: { class: OTP_TIMEOUT }
+    action: TERMINATE
+    rationale_code: NEVER_AUTHORISED
+
+  # ---- ISSUER ----
+  - rule_id: ISSUER_RETRY_WINDOW_004
+    match: { class: ISSUER_DECLINE, attempt_index_lt: 2 }
+    action: RETRY_SAME_RAIL
+    backoff: ISSUER_HEALTH_GATED
+    rationale_code: ISSUER_RETRY_WINDOW
+  - rule_id: ISSUER_RETRY_WINDOW_004
+    match: { class: ISSUER_DECLINE, attempt_index_gte: 2 }
+    action: TERMINATE
+    rationale_code: ATTEMPTS_EXHAUSTED
+  - rule_id: SOFT_DECLINE_RETRY_005
+    match: { class: SOFT_DECLINE, attempt_index_lt: 3 }
+    action: RETRY_SAME_RAIL
+    backoff: EXPONENTIAL_JITTER
+    rationale_code: SOFT_DECLINE_RETRY
+  - rule_id: SOFT_DECLINE_RETRY_005
+    match: { class: SOFT_DECLINE, attempt_index_gte: 3 }
+    action: TERMINATE
+    rationale_code: ATTEMPTS_EXHAUSTED
+
+  # ---- TRANSIENT ----
+  - rule_id: RETRY_EXPONENTIAL_002
+    match: { class: NETWORK_ERROR, attempt_index_lt: 3 }
+    action: RETRY_SAME_RAIL
+    backoff: EXPONENTIAL_JITTER
+    rationale_code: TRANSIENT_RETRY
+  - rule_id: RETRY_EXPONENTIAL_002
+    match: { class: NETWORK_ERROR, attempt_index_gte: 3 }
+    action: TERMINATE
+    rationale_code: ATTEMPTS_EXHAUSTED
+  - rule_id: RETRY_EXPONENTIAL_002
+    match: { class: GATEWAY_ERROR, attempt_index_lt: 3 }
+    action: RETRY_SAME_RAIL
+    backoff: EXPONENTIAL_JITTER
+    rationale_code: TRANSIENT_RETRY
+  - rule_id: RETRY_EXPONENTIAL_002
+    match: { class: GATEWAY_ERROR, attempt_index_gte: 3 }
+    action: TERMINATE
+    rationale_code: ATTEMPTS_EXHAUSTED
+
+  # ---- RISK: no money movement ----
+  - rule_id: RISK_BLOCK_NO_RETRY_011
+    match: { class: RISK_DECLINED }
+    action: TERMINATE
+    rationale_code: RISK_TERMINAL
+  - rule_id: RISK_BLOCK_NO_RETRY_011
+    match: { class: FRAUD_SUSPECTED }
+    action: TERMINATE
+    rationale_code: RISK_TERMINAL
+
+  # ---- OPERATIONAL / UNCLASSIFIED ----
+  - rule_id: DUPLICATE_NO_ACTION_014
+    match: { class: DUPLICATE_DETECTED }
+    action: TERMINATE
+    rationale_code: ALREADY_COLLECTED
+  - rule_id: ESCALATE_UNKNOWN_009
+    match: { class: UNKNOWN }
+    action: ESCALATE_HUMAN
+    rationale_code: UNCLASSIFIED
+    requires_human_approval: true

@@ -1,0 +1,15 @@
+# Regulatory constants. NOTHING here is verified. Every entry renders an amber
+# UNVERIFIED chip in the console until a human checks it against a live circular.
+version: "v0.1.0-unverified"
+
+constants:
+  - rule_id: C_COMPLIANCE_WINDOW
+    key: retry_window_hours
+    value: 24
+    source_citation: "Placeholder - VERIFY against current RBI / network guidance"
+    verified_on: null
+  - rule_id: C_VELOCITY_LIMIT
+    key: max_attempts_24h
+    value: 3
+    source_citation: "Placeholder - VERIFY against card network re-presentation rules"
+    verified_on: null

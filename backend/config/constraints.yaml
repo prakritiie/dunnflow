@@ -1,0 +1,17 @@
+# Ordered veto chain. Position 0 runs first; the chain short-circuits on first DENY.
+# fail_mode CLOSED means an evaluation error denies the action.
+version: "v1.9.0"
+
+constraints:
+  - { position: 0,  id: C_AMBIGUITY_CHECK,   fail_mode: CLOSED, description: "Case must not have an unresolved ambiguous attempt" }
+  - { position: 1,  id: C_ATTEMPT_CAP,       fail_mode: CLOSED, description: "Per-class attempt cap" }
+  - { position: 2,  id: C_VELOCITY_LIMIT,    fail_mode: CLOSED, description: "Max attempts in a rolling 24h window", limit: 3 }
+  - { position: 3,  id: C_PROHIBITED_CLASS,  fail_mode: CLOSED, description: "PROHIBITED classes may never move money" }
+  - { position: 4,  id: C_HARD_CLASS,        fail_mode: CLOSED, description: "HARD classes may never be retried" }
+  - { position: 5,  id: C_AMOUNT_CEILING,    fail_mode: CLOSED, description: "Amount above ceiling requires human approval", ceiling_minor: 5000000 }
+  - { position: 6,  id: C_INSTRUMENT_VALID,  fail_mode: CLOSED, description: "Instrument must not be expired or blocked" }
+  - { position: 7,  id: C_ISSUER_SENTINEL,   fail_mode: CLOSED, description: "Issuer EWMA success rate floor", floor: 0.60 }
+  - { position: 8,  id: C_CIRCUIT_BREAKER,   fail_mode: CLOSED, description: "Gateway circuit must be CLOSED" }
+  - { position: 9,  id: C_IDEMPOTENCY_LOCK,  fail_mode: CLOSED, description: "Idempotency key must not already be consumed" }
+  - { position: 10, id: C_COMPLIANCE_WINDOW, fail_mode: CLOSED, description: "Retry must fall inside the permitted window", unverified: true }
+  - { position: 11, id: C_KILL_SWITCH,       fail_mode: CLOSED, description: "Global kill switch must not be armed" }
