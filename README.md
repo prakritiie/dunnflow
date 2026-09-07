@@ -1,76 +1,44 @@
 # dunnflow - Autonomous Revenue Recovery & Compliance Engine
-**Track 03: Autonomous Financial Workflows & Compliance**
+**Track 03: AI Revenue Recovery**
 
+**dunnflow** detects revenue slipping away (failed payments, checkout abandonment, overdue receivables), figures out *why*, picks the right intervention, and executes a *bounded* recovery workflow — with the bar being: show *measured* money recovered across a batch, compliant escalation, stopping rules, and an audit trail. 
 
-An agentic financial intelligence engine designed to intercept failed subscription payments, automate recovery routing, and prevent revenue churn—all bounded by zero-trust regulatory constraints and cryptographic auditability.
+##
+## what it does
 
----
+1. **Classifies Failures:** Uses a 4-tier cascade (Exact Map $\rightarrow$ Cache $\rightarrow$ Gemini LLM $\rightarrow$ Human Escalation)
+2. **Selects Policy Directives:** Maps failure reasons to static, versioned YAML policy matrices
+3. **Enforces Compliance:** Runs actions through 12 deterministic guardrails (attempt caps, velocity limits, kill switch)
+4. **Prevents Double Charges:** Uses action-aware idempotency keys and reconciles ambiguous gateway timeouts
+5. **Cryptographic Auditing:** Commits every state transition to an append-only SHA-256 hash-chained ledger
+6. **Measures Yield:** Benchmarks recovery rate, recovered amount, and duplicate charges against a control baseline (`ARM_DUNNFLOW`)
 
-## 📌 Introduction
-
-Subscription businesses lose up to 15% of recurring MRR due to silent payment failures, gateway timeouts, and expired cards. Traditional billing systems rely on static, blind retries that often trigger rate limits or higher failure rates.
-
-**dunnflow** replaces blind retry systems with an intelligent, multi-agent orchestration layer. It dynamically classifies payment failure codes (e.g., transient gateway errors vs. hard issuer declines), runs deterministic policy checks, and determines optimal recovery actions (retry schedules, credit-cycle deferrals, or human escalation). Crucially, **dunnflow** enforces strict mathematical safety guardrails through a hash-linked cryptographic ledger—ensuring no non-deterministic model ever executes an unverified money-movement action.
-
----
-
-## 📐 System Architecture
-
-Below is the end-to-end operational architecture illustrating the flow from payment event ingestion to multi-agent reasoning, policy validation, and cryptographic audit execution:
-
-
-elow is the end-to-end operational architecture illustrating the flow from payment event ingestion to multi-agent reasoning, policy validation, and cryptographic audit execution:
-
-
----
+##  system architecture
 
 
 <p align="center">
-  <img src="./assets/architecture-diagram.png" alt="dunnflow System Architecture" width="100%" />
+  <img src="./sys_diagram.png" alt="dunnflow system diagram" width="100%" />
 </p>
 
-> **Note:** Upload your diagram image to `./assets/architecture-diagram.png` in the repository to display it above.
+##
 
----
+## tech stack
 
-## 🛠 Tech Stack
+| Domain | Tech | Selection Rationale |
+| :--- | :--- | :--- |
+| **Backend** | Python 3.13 / FastAPI | Async-native pipeline with Pydantic v2 schemas generating API contracts |
+| **Orchestration** | LangGraph | Durable state-machine executor with strictly deterministic routing |
+| **Database** | PostgreSQL 16 + SQLAlchemy (async) | Single ACID transactional store backing state updates and hash-chained audit logs |
+| **Idempotency** | Redis 7 | Distributed `SETNX` locks to prevent duplicate execution across restarts |
+| **Policy Engine** | PyYAML 6.0+ | Version-controlled, SHA-pinned YAML matrices for zero-I/O rule evaluation |
+| **AI Classifier** | Google Gemini API  | Tier-3 fallback classifier constrained to output closed taxonomy enums |
+| **Frontend** | React 19 / TypeScript 5.7 | Single-Page Application (SPA) mirroring backend Pydantic types |
+| **Tooling & Styling** | Vite 8 / Tailwind CSS v4 | Fast HMR dev server and utility-first styling for a dense data console |
+| **Infra & Test** | Docker Compose / pytest + Hypothesis | Containerized stateful services with property-based testing for policy invariants |
 
-| Domain | Technologies / Frameworks Used |
-| :--- | :--- |
-| **Frontend Dashboard** | Next.js (React), TypeScript, Tailwind CSS, `shadcn/ui` components |
-| **Backend & APIs** | FastAPI (Python), Async Processing, Pydantic data schemas |
-| **Agentic AI & Orchestration** | LangGraph, LangChain, SLM/LLM Intent Classifiers |
-| **Cryptographic Integrity Layer**| SHA-256 Hash-Linked Audit Chain (Append-only Ledger) |
-| **Data & Storage Layer** | Vector Store (Qdrant / ChromaDB), PostgreSQL |
-| **Development & Infra** | Docker, Python 3.11+ |
+##
 
-
-
-## 🔥 Key Features & Core Components
-
-### 1. Dynamic Case Management & Live Recovery Analytics
-* **Real-time Case Tracking:** Categorizes failed transactions into actionable states (`RECOVERED`, `DEFERRED`, `NEEDS_HUMAN`, `ESCALATED`).
-* **Run Launcher Simulations:** Allows engineers to execute multi-arm A/B tests (`ARM_DUNNFLOW` vs. Control baseline) across custom sample sizes to quantify recovery uplift.
-
-### 2. Human-in-the-Loop (HITL) Workflow
-* Escalates edge cases, recurring errors, or high-value payment disputes to human operators.
-* Includes single-click manual **Approve/Reject** controls with mandatory audit reasoning fields to ensure complete operational accountability.
-
-### 3. SHA-256 Hash-Linked Audit Chain
-* Every event, rule policy check, state transition, and model output is cryptographically signed and appended into a hash-linked ledger (`sha256(prev_hash || canonical_json(body))`).
-* **Zero-LLM Direct Execution Constraint:** Enforces zero unverified actions by mathematically requiring non-deterministic model outputs to pass through validated rule policies before execution.
-
-### 4. Policy Taxonomy Engine
-* Classifies incoming failure codes into defined failure domains: *Transient/Gateway, Liquidity, Behavioral, or Issuer*.
-* Applies deterministic execution directives like `RETRY_EXPONENTIAL`, `DEFER_TO_CREDIT_CYCLE`, or `HOLD`.
-
-### 5. Diagnostics & Dry-Run Playground
-* Interactive payload simulator allowing risk managers to inject synthetic failure scenarios (e.g., gateway timeouts, expired card details).
-* Sanitizes sensitive fields, evaluates risk tiers, and predicts policy outcome routes without executing real money movements.
-
-
-
-## 🚀 Getting Started
+## getting started
 
 ### Prerequisites
 * Python 3.11+
